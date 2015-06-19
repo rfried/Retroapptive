@@ -12,6 +12,7 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
+    padding: 10,
     items: [      // pre-define the general layout of the app; the skeleton (ie. header, content, footer)
       {
         xtype: 'container', // this container lets us control the layout of the pulldowns; they'll be added below
@@ -28,8 +29,7 @@ Ext.define('CustomApp', {
           align: 'bottom',
           type: 'hbox'
         },
-        border: 0,
-        padding: 10
+        border: 0
       },
       {
         xtype: 'container', // this container is for the controls related to item submission
@@ -88,10 +88,9 @@ Ext.define('CustomApp', {
         var textInput = Ext.create('Rally.ui.TextField', {
           itemId: 'add-new-text-box',
           emptyText: 'Enter a short description of your retro item',
-          fieldLabel: 'Add New Retro Item',
+          fieldLabel: 'ADD NEW RETRO ITEM',
           labelSeparator: '',
-
-          flex: 10,
+          flex: 8,
           height: 40,
           labelAlign: 'top',
           margin: 5,
@@ -117,15 +116,13 @@ Ext.define('CustomApp', {
           fieldLabel: 'Anonymous',
           labelSeparator: '',
           value: true,
-
           flex: 1,
           labelAlign: 'right',
           margin: 5
         });
         var category = Ext.create('Rally.ui.combobox.ComboBox', {
           itemId: 'add-new-combo-box',
-          fieldLabel: 'Category',
-
+          fieldLabel: 'CATEGORY',
           flex: 1,
           labelAlign: 'top',
           margin: 5,
@@ -239,7 +236,6 @@ Ext.define('CustomApp', {
       try {
         var iterationNotes = myiterationStore.data.items[0].data.Notes;
         if (iterationNotes) {
-          // debugger;
           this.retroItems = JSON.parse(iterationNotes);
         }
         else {
@@ -256,7 +252,8 @@ Ext.define('CustomApp', {
 
         me.retroItemsPanel = Ext.create('Ext.panel.Panel', {
             itemId:'item-panel',
-            title: 'Items',
+           margin:'10 0 0 0',
+           border: false,
             defaults: {
                 // applied to each contained panel
                 bodyStyle: 'padding:15px'
@@ -279,19 +276,16 @@ Ext.define('CustomApp', {
       var retroContainerBox = button.up('container');
       var me = button.up('#retroApp');
       console.log(me.retroItems);
-      // debugger;
       _.forEach(RETRO_CATEGORIES, function(category) {
           var itemRef = _.find(me.retroItems[category.key], function(item) {return _.isEqual(item, retroItem)});
           if(itemRef){
-            //debugger;
               _.remove(me.retroItems[category.key], itemRef);
               var panel = button.up('#panel-'+category.key);
-              debugger;
               panel.remove(retroContainerBox);
               me._createAccordionPanel();
           }
         }, button);
-        //https://lodash.com/docs#forEach
+
       me._updateData();
     },
 
@@ -308,10 +302,8 @@ Ext.define('CustomApp', {
       _.forEach(RETRO_CATEGORIES, function(category) {
           var itemRef = _.find(me.retroItems[category.key], function(item) {return _.isEqual(item, retroItem)});
           var voter = {'name':Rally.environment.getContext().getUser().UserName, 'uid':Rally.environment.getContext().getUser().ObjectID};
-          // debugger;
           if(itemRef){
             var userHasVoted = _.contains(_.pluck(retroItem.votes['voted'], 'uid'), voter.uid);
-            debugger;
             if(!userHasVoted){
               itemRef.votes['count'] += 1;
               retroItem.votes['count'] += 1;
@@ -379,13 +371,22 @@ Ext.define('CustomApp', {
       var me = this;
       console.log(retroItem);
       console.log(me);
-      var textBox = Ext.create('Ext.draw.Text', {
-          itemId: 'text-retro-item',
-          text: retroItem.description
-        });
+      // var textBox = Ext.create('Ext.draw.Text', {
+      //     itemId: 'text-retro-item',
+      //     text: retroItem.description,
+      //     fontFamily: '',
+      //     font: 16
+      //   });
+      var textBox = {
+        border: 0,
+        marginTop: 0,
+
+        html: '<div style="font-size: 13px;">' + retroItem.description + '</div>'
+      };
       var button = Ext.create('Rally.ui.Button', {
           itemId: 'delete-retro-item-button',
           iconCls: 'icon-delete',
+          cls:'secondary rly-small',
           handler: me._handleDeleteClick,
           align: 'right',
           disabled: false
@@ -441,8 +442,6 @@ Ext.define('CustomApp', {
         items.push(voterImage);
       });
 
-      // debugger;
-
       var controls = Ext.create('Ext.container.Container', {
         itemId: 'controls-container',
         layout: {
@@ -473,7 +472,6 @@ Ext.define('CustomApp', {
       var me = this;
       console.log(me);
       return _.map(RETRO_CATEGORIES, function(category) {
-              //debugger;
               return {
                 title: category.display,
                 itemId: 'panel-'+category.key,
