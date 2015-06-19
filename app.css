@@ -1,3 +1,6 @@
 .app {
      /* Add app styles here */
+  .x-form-item-label.x-unselectable.x-form-item-label-top {
+    text-transform: uppercase;
+  }
 }
