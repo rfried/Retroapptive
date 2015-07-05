@@ -51,6 +51,20 @@ Ext.define('CustomApp', {
       var me = this;                     // convention to hold a reference to the 'app' itself; reduce confusion of 'this' all over the place; when you see 'me' it means the 'app'
       me._renderSubmissionField();
       me._loadIterations();
+      //TODO: this is a total hack because I can't easily get asynchronous data loads from other app sessions.
+      //      theoretically if I stored the data in an external database then I wouldn't need this hack
+      //      because calls to readRetroItems would keep everything up-to-date on demand.
+      // Start a simple clock task that updates a the iteration once per second.  This helps stand in sync with other app sessions.
+      var task = {
+          run: function(){
+            if(me.iterationStore){
+              me.iterationStore.load();
+            }
+          },
+          interval: 1000 //1 second
+      };
+      Ext.TaskManager.start(task);
+
     },
     // create and load iteration pulldown
     _loadIterations: function() {
@@ -65,7 +79,7 @@ Ext.define('CustomApp', {
           width: 600,
           listeners: {
             ready: me._loadData,      // initialization flow: next, load severities
-            select: me._loadData,           // user interactivity: when they choose a value, (re)load the data
+            select: function(){me.loadedInitialData = false;me._loadData();},           // user interactivity: when they choose a value, (re)load the data
             scope: me
         }
         });
@@ -100,7 +114,10 @@ Ext.define('CustomApp', {
           listeners: {
               load: function(myStore, myData, success) {
                 me._readRetroItems();
-                me._renderRetroItems();
+                if(!me.loadedInitialData){
+                  me._renderRetroItems();
+                  me.loadedInitialData=true;
+                }
               },
               scope: me                         // This tells the wsapi data store to forward pass along the app-level context into ALL listener functions
           },
@@ -199,6 +216,7 @@ Ext.define('CustomApp', {
       _.forEach(me.retroItemsArray, function(retroItem){
         var retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
         if(retroItemContainerRef){
+          // console.log(retroItem);
           me._updateRetroItemContainer(retroItem);
         } else {
           me._addRetroItemContainer(retroItem);
@@ -383,12 +401,16 @@ Ext.define('CustomApp', {
     },
     _updateRetroItemContainer: function(retroItem){
       // TODO: I cannot figure out how to avoid a full-page refresh, losing the user's scroll position when adding/removing from the layout.
+      //       I think the Rally app class (which gives the AutoScroll behavior) does this due to layout chaining.
       var me = this;
       var retroItemContainerRef = {};
       try {
         retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
         if(retroItemContainerRef){
           var retroItemRef = me._getRetroItemRef(retroItem);
+          // console.log(retroItemRef);
+          // console.log(retroItemContainerRef.retroItem);
+          // console.log(retroItem);
           // detect whether the container should be redrawn based on whether the container's cached retroItem is different than the updated retroItem.
           if(!_.isEqual(retroItemRef, retroItemContainerRef.retroItem)){
             // creating and replacing the entire retro item container is much cleaner code than other options.
@@ -456,6 +478,9 @@ Ext.define('CustomApp', {
       return retroContainerRef;
     },
 // RetroItems management ------------------------------------------------------------------------------------------------------------------------------------
+    //TODO: This function does not reload the store data as desired (probably because it doesn't all store.load() yet :-p)
+    //TODO: For this function to reload store data it must somehow make the asynchronous call block the calling functions.
+    //TODO: is there a way for a background thread to continuously reload the data? (like once a second?);
     _readRetroItems: function(){
       var me = this;
       me.retroItemsArray = [];
@@ -549,23 +574,29 @@ Ext.define('CustomApp', {
       var me = button.up('#retroApp');
       var controlsContainer = button.up('container');
       var retroItem = controlsContainer.retroItem;
+      // debugger;
       me._readRetroItems();
       var retroItemRef = me._getRetroItemRef(retroItem);
       if(!retroItemRef){
         alert("Retrospective item was deleted in another session.  Sorry for the inconvenience");
       } else {
-        var user = {'name':Rally.environment.getContext().getUser().UserName, 'uid':Rally.environment.getContext().getUser().ObjectID};
-        var userHasVoted = _.contains(_.pluck(retroItemRef.voters, 'uid'), user.uid);
-        // debugger;
-        if(!userHasVoted){
-          retroItemRef.voters.push(user);
+        // if the state of the container is different than intended, render the non-stale data
+        if(!_.isEqual(retroItem, retroItemRef)){
+          alert("Another user updated this item in another session.  Please try your operation again now.");
         } else {
-          var voterRef = _.find(retroItemRef.voters, function(voterRecord) {return _.isEqual(voterRecord, user);});
-          _.remove(retroItemRef.voters,voterRef);
+          var user = {'name':Rally.environment.getContext().getUser().UserName, 'uid':Rally.environment.getContext().getUser().ObjectID};
+          var userHasVoted = _.contains(_.pluck(retroItemRef.voters, 'uid'), user.uid);
+          // debugger;
+          if(!userHasVoted){
+            retroItemRef.voters.push(user);
+          } else {
+            var voterRef = _.find(retroItemRef.voters, function(voterRecord) {return _.isEqual(voterRecord, user);});
+            _.remove(retroItemRef.voters,voterRef);
+          }
+          me._updateRetroItem(retroItemRef);
         }
-        me._updateRetroItem(retroItemRef);
-        me._renderRetroItems();
       }
+      me._renderRetroItems();
     },
     // Handle what happens when the user clicks Vote for a retroItem.
     _handleHandledClick: function(button){
@@ -577,17 +608,21 @@ Ext.define('CustomApp', {
       var retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
       if(!retroItemRef){
         alert("Retrospective item was deleted in another session.  Sorry for the inconvenience");
+        me._renderRetroItems();
       } else {
-        retroItemRef.handled = !retroItemRef.handled;
-        me._setButtonState(button, retroItemRef.handled);
-        me._updateRetroItem(retroItemRef);
+        // if the state of the container is as expected (no changes in the background) then make the user-directed change
+        if(!_.isEqual(retroItem, retroItemRef)){
+          alert("Another user updated this item in another session.  Please try your operation again now.");
+        } else {
+          retroItemRef.handled = !retroItemRef.handled;
+          me._updateRetroItem(retroItemRef);
+        }
         // NOTE: the render call redraws the entire layout.  When inserting/removing elements in the layout, this is unavoidable.
         // When toggling a single button style based on a boolean? It's avoidable. Instead of re-rendering we update the UI button state directly.
         // This trade also means we will not pick up changes from other sessions.
         //me._renderRetroItems();
-        me._setButtonState(retroItemContainerRef.down('#handled-retro-item-button'), retroItemRef.handled);
+        me._setButtonState(button, retroItemRef.handled);
         retroItemContainerRef.retroItem = retroItemRef;
-
       }
     },
 // Helpers---------------------------------------------------------------------------------------------------------------------------------------
