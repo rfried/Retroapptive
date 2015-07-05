@@ -1,16 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>the-retrospective</title>
-
-    <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
-
-    <script type="text/javascript">
-        Rally.onReady(function () {
-                var RETRO_CATEGORIES = [{key:'GOOD',display:'THE GOOD'}, {key:'BAD',display:'THE BAD'}, {key: 'IDEAS',display:'THE IDEAS'}, {key: 'ACCLAIM', display:'THE ACCLAIM'}];
+var RETRO_CATEGORIES = [{key:'GOOD',display:'THE GOOD'}, {key:'BAD',display:'THE BAD'}, {key: 'IDEAS',display:'THE IDEAS'}, {key: 'ACCLAIM', display:'THE ACCLAIM'}];
 
 Ext.define('CustomApp', {
-    extend: 'Rally.app.App',
+    extend: 'Rally.app.TimeboxScopedApp',
     componentCls: 'app',
     padding: 10,
     items: [      // pre-define the general layout of the app; the skeleton (ie. header, content, footer)
@@ -43,6 +34,19 @@ Ext.define('CustomApp', {
       }
     ],
     itemId:'retroApp',
+
+    settingsScope: 'project',
+    userScopedSettings: false,
+    scopeType: 'iteration',
+    supportsUnscheduled: false,
+    config: {
+      defaultSettings: {
+        showCardAge: true,
+        showStatsBanner: true,
+        cardAgeThreshold: 3
+      },
+      includeStatsBanner: true
+    },
     iterationStore: undefined,       // app level references to the store and grid for easy access in various methods
     retroItemsPanel: undefined,
 
@@ -50,7 +54,74 @@ Ext.define('CustomApp', {
     launch: function() {
       var me = this;                     // convention to hold a reference to the 'app' itself; reduce confusion of 'this' all over the place; when you see 'me' it means the 'app'
       me._renderSubmissionField();
-      me._loadIterations();
+      if(!me.getContext().getTimeboxScope()) {
+        me._loadIterations();
+      } else {
+        me._loadData();
+      }
+    },
+    // _getIterationOid: function() {
+    //   var iterationId = '-1';
+    //   var timebox = this.getContext().getTimeboxScope();
+
+    //   if (timebox && timebox.getRecord()) {
+    //     iterationId = timebox.getRecord().getId();
+    //   }
+    //   return iterationId;
+    // },
+    // constructor: function(config) {
+    //     _.defaults(config, { layout: 'anchor'});
+
+    //     this.callParent(arguments);
+    // },
+    onScopeChange: function() {
+        var me = this;
+        if(!me.rendered) {
+            me.on('afterrender', me.onScopeChange, me, {single: true});
+            return;
+        }
+        me.suspendLayouts();
+        // if (me._shouldShowStatsBanner()){
+        //         me._addStatsBanner();
+        //     }
+        me._loadData();
+        me.resumeLayouts(true);
+    },
+    // getUserSettingsFields: function () {
+    //   var fields = this.callParent(arguments);
+
+    //   fields.push({
+    //     xtype: 'rallystatsbannersettingsfield',
+    //     fieldLabel: '',
+    //     mapsToMultiplePreferenceKeys: ['showStatsBanner']
+    //   });
+
+    //   return fields;
+    // },
+    // _shouldShowStatsBanner: function() {
+    //         return this.includeStatsBanner && this.getSetting('showStatsBanner');
+    //     },
+
+    //     _addStatsBanner: function() {
+    //       this.remove('statsBanner');
+    //       this.add({
+    //             xtype: 'statsbanner',
+    //             itemId: 'statsBanner',
+    //             context: this.getContext(),
+    //             margin: '0 0 5px 0',
+    //             shouldOptimizeLayouts: this.config.optimizeFrontEndPerformanceIterationStatus,
+    //             listeners: {
+    //                 resize: this._resizeGridBoardToFillSpace,
+    //                 scope: this
+    //             }
+    //       });
+    //     },
+    _getTimeboxFilters: function() {
+      var me = this;
+      var timeboxScope = me.getContext().getTimeboxScope();
+      var timeboxFilter = timeboxScope.getQueryFilter();
+      var filters = [timeboxFilter];
+      return filters;
     },
     // create and load iteration pulldown
     _loadIterations: function() {
@@ -70,7 +141,7 @@ Ext.define('CustomApp', {
         }
         });
 
-        this.down('#pulldown-container').add(iterComboBox);  // add the iteration list to the pulldown container so it lays out horiz, not the app!
+        me.down('#pulldown-container').add(iterComboBox);  // add the iteration list to the pulldown container so it lays out horiz, not the app!
     },
     // construct filters for defects with given iteration (ref) value
     _getFilters: function(iterationValue) {
@@ -84,13 +155,19 @@ Ext.define('CustomApp', {
     // Get data from Rally
     _loadData: function() {
       var me = this;
-      var selectedIterRef = this.down('#iteration-combobox').getRecord().get('ObjectID');              // the _ref is unique, unlike the iteration name that can change; lets query on it instead!
-      var myFilters = this._getFilters(selectedIterRef);
+      var myFilters;
+      // if we loaded the iteration combobox then we don't have a timeboxScope like we expect
+      if(me.down('#iteration-combobox')){
+        // the _ref is unique, unlike the iteration name that can change; lets query on it instead!
+        var selectedIterRef = me.down('#iteration-combobox').getRecord().get('ObjectID');
+        myFilters = me._getFilters(selectedIterRef);
+      } else {
+        myFilters = me._getTimeboxFilters();
+      }
       // if store exists, just load new data
       if (me.iterationStore) {
         me.iterationStore.setFilter(myFilters);
         me.iterationStore.load();
-
       // create store
       } else {
         me.iterationStore = Ext.create('Rally.data.wsapi.Store', {     // create iterationStore on the App (via this) so the code above can test for it's existence!
@@ -99,7 +176,9 @@ Ext.define('CustomApp', {
           filters: myFilters,
           listeners: {
               load: function(myStore, myData, success) {
-                me._readRetroItems();
+                console.log(myStore);
+                console.log(myData);
+                me._readRetroItems(myStore);
                 me._renderRetroItems();
               },
               scope: me                         // This tells the wsapi data store to forward pass along the app-level context into ALL listener functions
@@ -329,7 +408,7 @@ Ext.define('CustomApp', {
         // create panel if it doesn't exist
         if(!retroItemsPanel){
             retroItemsPanel = me._createRetroItemPanel('item-panel');
-            retroItemsPanel= me.down('#item-panel-container').add(retroItemsPanel);
+            retroItemsPanel = me.down('#item-panel-container').add(retroItemsPanel);
         }
       } catch(e) {
         console.log(e);
@@ -455,12 +534,14 @@ Ext.define('CustomApp', {
       return retroContainerRef;
     },
 // RetroItems management ------------------------------------------------------------------------------------------------------------------------------------
-    _readRetroItems: function(){
+    _readRetroItems: function(myiterationStore){
       var me = this;
       me.retroItemsArray = [];
+      var iterationStore = (myiterationStore)?myiterationStore:me.iterationStore;
       try {
-        if(me.iterationStore){
-          var iterationNotes = me.iterationStore.data.items[0].data.Notes;
+        if(iterationStore){
+          console.log(iterationStore);
+          var iterationNotes = iterationStore.data.items[0].data.Notes;
           if (iterationNotes) {
             me.retroItemsArray = JSON.parse(iterationNotes);
             _.sortBy(me.retroItemsArray, 'timestamp');
@@ -629,28 +710,3 @@ Ext.define('CustomApp', {
         }
     }
 });
-
-
-            Rally.launchApp('CustomApp', {
-                name:"the-retrospective",
-	            parentRepos:""
-            });
-
-        });
-    </script>
-
-
-
-    <style type="text/css">
-        .app {
-  /* Add app styles here */
-}
-.app .x-form-item-label.x-unselectable.x-form-item-label-top {
-  text-transform: uppercase;
-}
-
-    </style>
-</head>
-<body>
-</body>
-</html>
