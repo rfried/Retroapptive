@@ -1,0 +1,59 @@
+Intro:
+Ryan - NI
+Matt - NI
+David - Rally
+
+The retrospective is currently a very disparate process. Teams that use Rally as
+their "single source of truth" rely on other tools, sticky notes, or memory
+to track one of the most critical Agile ceremonies. Our team at NI uses a custom external app
+whose output is often discarded, forgotten, or never acted on.
+
+Our app brings this collaboration into Rally by allowing users to add feedback,
+collaborate with others on the team, and facilitate the retrospective discussion in a single source.
+
+As soon as the Iteration is created in Rally, the retrospective is available. Users
+can open the app and add feedback immediately rather than waiting days or weeks to capture their feedback. 
+Users have visibility into others' ideas, and they can like the ideas to promote them for the meeting.
+
+The team is empowered to delete items or mark items as discussed that are duplicated to streamline the discussion
+in the retrospective meeting.
+
+Here's how our team retrospected this year's hackathon. We brainstormed ideas in the app, and we were able to like ideas
+that we agreed with, and start our discussion.
+
+
+Problem:
+- Physically stored (On stickies, not searchable, hard to track over time)
+- Feedback collected in meeting after event has passed
+
+The App:
+We're going to create an app to facilitate the Retrospective discussion, allowing users to submit and collaborate points of feedback in the moment
+It will collect team feedback (what went well, what should stop, ideas, kudos)
+It will allow voting and provide a way to generate action items which spawn from the discussion.
+
+
+** make sure to add some ass kissing to the ux people
+
+
+
+** intro
+This is what I will say during the intro. I will also review the following tasks supported by our app:
+* joining a retro
+* adding a new item - anonymous
+* liking/unliking an existing item
+* deleting an item
+* completing an item
+
+** joining a retro
+Here's why you'd do that
+* Not everyone brainstorms effectively on-the-spot and people forget their feedback by the time the retro begins. We provide users the ability to log, collaborate and management feedback as soon as the Iteration is created.
+* People tend to focus on the last three or four days, a significantly shorter period than the average iteration.
+* Once the retro is complete, it becomes difficult to review previously discussed retro actions. All feedback points, likes, and status is managed in Rally, which enables a single source of truth.
+
+
+** adding a new item
+To add a new item enter some text in the description field. We'll add "UX helped a lot with our design, thanks Adrienne and Alex!". Now select a category, from good, bad, ideas, and acclaim this seems like acclaim.
+You might want to post these anonymously becuase you don't feel safe, but you have the option to attach your name to ideas. When you're done, just click add.
+
+** like and delete
+The app enables a streamlined process that allows users to collaborate and groom items in a way that facilitates conversation
