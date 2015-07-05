@@ -224,7 +224,7 @@ Ext.define('CustomApp', {
           iconCls: 'icon-thumbs-up',
           text: votedLabelTxt,
           handler: me._handleVoteClick,
-          align: 'right',
+          align: 'right'
         });
       var handledButton = Ext.create('Rally.ui.Button', {
           itemId: 'handled-retro-item-button',
@@ -253,7 +253,7 @@ Ext.define('CustomApp', {
           width: 25,
           layout: {
             align: 'center'
-          },
+          }
       });
       var items = [submitterImage, textSeparator, handledButton, button, voteButton];
       _.forEach(retroItem.voters, function(voter) {
@@ -262,7 +262,7 @@ Ext.define('CustomApp', {
             src: 'https://rally1.rallydev.com/slm/profile/viewThumbnailImage.sp?uid=' + voter.uid,
             height: 25,
             width: 25,
-            margin: 1,
+            margin: 1
         });
         items.push(voterImage);
       });
@@ -337,7 +337,7 @@ Ext.define('CustomApp', {
         var categoryConstant = _.find(RETRO_CATEGORIES, function(cat){ return cat.key == category;});
         if(retroItemPanel && !retroItemCategoryPanel){
           var categoryDisplay = (categoryConstant)?categoryConstant.display:category;
-          var retroItemCategoryPanel = me._createRetroItemCategoryPanel('panel-'+category, category, categoryDisplay);
+          retroItemCategoryPanel = me._createRetroItemCategoryPanel('panel-'+category, category, categoryDisplay);
           retroItemPanel.add(retroItemCategoryPanel);
         }
       } catch (e) {
@@ -361,7 +361,7 @@ Ext.define('CustomApp', {
       try {
         var retroItemPanel = me._addRetroItemsPanel();
         var retroItemCategoryPanel = me._addRetroItemCategoryPanel(retroItem.category);
-        var retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
+        retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
         if(!retroItemContainerRef){
           var retroItemContainer = me._createItemContainer(retroItem);
           var insertionIndex = _.sortedIndex(retroItemCategoryPanel.items.items, retroItemContainer, 'retroItem.timestamp');
@@ -389,9 +389,10 @@ Ext.define('CustomApp', {
             var retroItemContainerIndex = _.findIndex(parentContainer.items.items, function(container){ return retroItemContainerRef.itemId == container.itemId;});
             parentContainer.remove(retroItemContainerRef);
             parentContainer.insert(retroItemContainerIndex, retroItemContainer);
-          } else {
-            Ext.destroy(retroItemContainer);
           }
+          // else {
+          //   Ext.destroy(retroItemContainer);
+          // }
           // if the version of retroItem stored on the container is stale, update it.
           // if(!_.isEqual(retroItemRef, retroItemContainerRef.retroItem)){
           //   me._setButtonState(retroItemContainerRef.down('#handled-retro-item-button'), retroItemRef.handled);
@@ -499,7 +500,7 @@ Ext.define('CustomApp', {
       try {
         var me = this;
         var resultStr = JSON.stringify(me.retroItemsArray);
-        me.iterationStore.data.items[0].set('Notes', resultStr)
+        me.iterationStore.data.items[0].set('Notes', resultStr);
         me.iterationStore.data.items[0].save();
       } catch(e) {
         console.log(e);
@@ -530,7 +531,6 @@ Ext.define('CustomApp', {
     _handleDeleteClick: function(button){
       var me = button.up('#retroApp');
       var retroItem = button.up('container').retroItem;
-      var retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
       me._deleteRetroItem(retroItem);
       me._deleteRetroItemContainer(retroItem);
       me._renderRetroItems();
@@ -542,7 +542,6 @@ Ext.define('CustomApp', {
       var retroItem = controlsContainer.retroItem;
       me._readRetroItems();
       var retroItemRef = me._getRetroItemRef(retroItem);
-      var retroItemContainerRef = me._getRetroItemContainerRef(retroItem);
       if(!retroItemRef){
         alert("Retrospective item was deleted in another session.  Sorry for the inconvenience");
       } else {
@@ -552,7 +551,7 @@ Ext.define('CustomApp', {
         if(!userHasVoted){
           retroItemRef.voters.push(user);
         } else {
-          var voterRef = _.find(retroItemRef.voters, function(voterRecord) {return _.isEqual(voterRecord, user)});
+          var voterRef = _.find(retroItemRef.voters, function(voterRecord) {return _.isEqual(voterRecord, user);});
           _.remove(retroItemRef.voters,voterRef);
         }
         me._updateRetroItem(retroItemRef);
